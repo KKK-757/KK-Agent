@@ -17,6 +17,7 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import json
 import sys
 
 # Windows console GBK encoding issue: force UTF-8 output, to avoid garbled text when recording demo videos
@@ -52,6 +53,9 @@ HELP = """
   risk                    风控状态
   testnet                 模拟盘（Test Network）接入指引
   mcp                     币安官方 MCP 接入指引
+  mcp-connect             连接官方 MCP（首次会打开浏览器授权）
+  mcp-tools               列出 MCP 提供的全部工具
+  mcp-call <工具名> [JSON]  调用某个 MCP 工具
   capabilities            能力清单
   selftest                连通性自检
   help                    本帮助
@@ -154,6 +158,47 @@ async def main(argv: list[str]) -> int:
 
         if cmd == "mcp":
             print(agent.tool_mcp())
+            return 0
+
+        if cmd == "mcp-connect":
+            from agent.mcp_client import BinanceMcpClient
+            c = BinanceMcpClient()
+            try:
+                info = c.connect()
+                print("[MCP] 连接成功")
+                print(json.dumps(info, ensure_ascii=False, indent=1)[:500])
+                tools = c.list_tools()
+                print(f"\n[MCP] 可用工具 {len(tools)} 个：")
+                for t in tools:
+                    print(f"  - {t.name}: {t.description[:80]}")
+            finally:
+                c.close()
+            return 0
+
+        if cmd == "mcp-tools":
+            from agent.mcp_client import BinanceMcpClient
+            c = BinanceMcpClient()
+            try:
+                c.connect()
+                for t in c.list_tools():
+                    print(f"- {t.name}\n    {t.description}\n    参数: {json.dumps(t.schema, ensure_ascii=False)[:200]}")
+            finally:
+                c.close()
+            return 0
+
+        if cmd == "mcp-call":
+            if len(args) < 1:
+                print("用法：mcp-call <工具名> ['{\"参数\":值}']")
+                return 1
+            from agent.mcp_client import BinanceMcpClient
+            c = BinanceMcpClient()
+            try:
+                c.connect()
+                tool_args = json.loads(args[1]) if len(args) > 1 else {}
+                result = c.call_tool(args[0], tool_args)
+                print(json.dumps(result, ensure_ascii=False, indent=1)[:2000])
+            finally:
+                c.close()
             return 0
 
         if cmd == "capabilities":
