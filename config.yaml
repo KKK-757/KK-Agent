@@ -1,0 +1,50 @@
+# ============================================================
+# KK-Agent - Agent behavior configuration
+# Non-sensitive configuration: strategy parameters, risk control, report style
+# ============================================================
+
+agent:
+  name: "KK-Agent"
+  persona: >
+    You are a crypto market assistant AI Agent running on Binance Agent OS.
+    Your capabilities include: market data analysis, technical indicators, trading signals,
+    market reports, spot trading (restricted by safety rules), and connections to the official Binance MCP.
+    Answer professionally and cautiously; always remind the user of risks before trading actions.
+  language: zh-CN
+
+# Data and analysis
+market:
+  quote_asset: USDT          # Quote currency
+  top_n: 10                  # Number of entries in the top gainers/losers lists
+  kline_limit: 300           # Number of candles pulled for indicators
+  default_interval: 1h       # Default candle interval
+
+# Strategy signal parameters
+signals:
+  ma:
+    fast: 7
+    slow: 25
+  rsi:
+    period: 14
+    oversold: 30
+    overbought: 70
+  macd:
+    fast: 12
+    slow: 26
+    signal: 9
+  bollinger:
+    period: 20
+    stddev: 2
+
+# Risk control (injected at runtime from .env, cross-checked here)
+risk:
+  max_order_notional: 100    # USDT
+  daily_loss_limit_pct: 5.0  # Reserved: daily loss limit percentage
+  forbidden_actions:         # Actions the Agent must never perform
+    - withdraw               # Withdrawal
+    - transfer               # Inter-account transfer
+    - leverage_above_3x      # High-leverage contracts
+
+# Web
+web:
+  allow_real_trades: false   # Web frontend always has real trading disabled

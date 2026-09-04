@@ -1,0 +1,10 @@
+services:
+  kk-agent:
+    build: .
+    ports:
+      - "127.0.0.1:8788:8788"   # 只绑定本机回环，避免暴露到局域网
+    env_file:
+      - .env                    # Key 通过 .env 注入（.env 不进镜像）
+    volumes:
+      - ./watchlist.json:/app/watchlist.json   # 自选列表持久化
+    restart: unless-stopped

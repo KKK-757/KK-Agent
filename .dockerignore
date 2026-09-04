@@ -1,0 +1,20 @@
+# 密钥与个人数据绝不进镜像
+.env
+watchlist.json
+*.key
+*.pem
+
+# git / 缓存 / 临时
+.git
+.tmp
+.pytest_cache
+__pycache__
+*.py[cod]
+.venv
+
+# 文档与钩子（镜像只需运行时）
+README.md
+Dockerfile
+docker-compose.yml
+scripts/
+.gitignore

@@ -1,0 +1,21 @@
+# KK-Agent dependencies
+# Python 3.10+
+
+# HTTP client (asynchronous, used for Binance public API / signed API / LLM calls)
+httpx>=0.27.0
+
+# Configuration and environment variables
+python-dotenv>=1.0.0
+pydantic>=2.7.0
+PyYAML>=6.0
+
+# CLI experience
+rich>=13.7.0
+
+# Web app
+fastapi>=0.111.0
+uvicorn>=0.30.0
+
+# Testing
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
