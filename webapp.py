@@ -22,6 +22,11 @@ STATIC = ROOT / "web" / "index.html"
 settings = load_settings()
 agent = BinanceAgent(settings)
 
+# MCP SDK 客户端（网页化授权 + 会话保活）—— 挂到 agent 上统一管理
+from agent.mcp_sdk_client import SdkMcpClient as _SdkMcpClient  # noqa: E402
+
+agent.mcp_sdk = _SdkMcpClient()
+
 app = FastAPI(title="KK-Agent", version="1.0.0")
 
 # ----------------------------------------------------------------------
@@ -254,6 +259,78 @@ async def backtest(symbol: str, interval: str = "1h"):
 class WatchIn(BaseModel):
     action: str = "list"        # list / add / del
     symbol: str = ""
+
+
+# ----------------------------------------------------------------------
+# MCP 网页化（连接/状态/工具列表/工具调用）
+# ----------------------------------------------------------------------
+class McpToolCallIn(BaseModel):
+    name: str
+    arguments: Dict[str, Any] = {}
+
+
+@app.get("/api/mcp/status")
+async def mcp_status():
+    c = agent.mcp_sdk
+    return {
+        "connected": c.connected,
+        "auth_status": c.auth_state.status,
+        "auth_detail": c.auth_state.detail,
+        "auth_url": c.auth_state.auth_url if c.auth_state.status == "waiting_browser" else "",
+        "proxy": bool(c.proxy),
+        "token_file": agent.mcp_sdk and Path(".mcp_token").exists(),
+    }
+
+
+@app.post("/api/mcp/connect")
+async def mcp_connect():
+    """网页点「连接」：后台起 OAuth（token 已持久化则直接静默重连，不弹浏览器）。"""
+    import asyncio
+
+    async def _do():
+        try:
+            info = await agent.mcp_sdk.connect()
+            return {"ok": True, "info": info}
+        except Exception as e:  # noqa: BLE001
+            agent.mcp_sdk.auth_state.status = "failed"
+            agent.mcp_sdk.auth_state.detail = str(e)[:200]
+            return {"ok": False, "error": str(e)[:200]}
+
+    # 后台任务：不阻塞网页请求（授权要等浏览器交互，前端轮询状态）
+    task = asyncio.create_task(_do())
+    return {"ok": True, "message": "连接流程已启动，请轮询 /api/mcp/status"}
+
+
+@app.get("/api/mcp/tools")
+async def mcp_tools():
+    try:
+        tools = await agent.mcp_sdk.list_tools()
+        return {"ok": True, "tools": tools}
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(400, str(e)[:200])
+
+
+@app.post("/api/mcp/call")
+async def mcp_call(body: McpToolCallIn):
+    try:
+        result = await agent.mcp_sdk.call_tool(body.name, body.arguments)
+        return JSONResponse({"ok": True, "result": result})
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"ok": False, "error": str(e)[:300]}, status_code=400)
+
+
+@app.post("/api/mcp/disconnect")
+async def mcp_disconnect():
+    await agent.mcp_sdk.close()
+    return {"ok": True, "message": "已断开（token 保留，重连不再需要授权）"}
+
+
+@app.on_event("shutdown")
+async def _shutdown_mcp():
+    try:
+        await agent.mcp_sdk.close()
+    except Exception:
+        pass
 
 
 @app.post("/api/watch")

@@ -1,0 +1,33 @@
+{
+ "tokens": null,
+ "client_info": {
+  "response_types": [
+   "code"
+  ],
+  "scope": null,
+  "client_name": null,
+  "client_uri": null,
+  "logo_uri": null,
+  "contacts": null,
+  "tos_uri": null,
+  "policy_uri": null,
+  "jwks_uri": null,
+  "jwks": null,
+  "software_id": null,
+  "software_version": null,
+  "redirect_uris": [
+   "http://127.0.0.1:18731/callback"
+  ],
+  "token_endpoint_auth_method": "none",
+  "grant_types": [
+   "authorization_code",
+   "refresh_token"
+  ],
+  "application_type": null,
+  "client_id": "https://raw.githubusercontent.com/KKK-757/KK-Agent/main/oauth-client-metadata.json",
+  "client_secret": null,
+  "client_id_issued_at": null,
+  "client_secret_expires_at": null,
+  "issuer": "https://agent.binance.com"
+ }
+}

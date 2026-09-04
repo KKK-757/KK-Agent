@@ -110,6 +110,11 @@
       <span class="ktab" data-iv="4h">4h</span>
       <span class="ktab" data-iv="1d">1d</span>
     </div>
+    <div class="sideHead" style="border-top:1px solid var(--border)"><b>币安 MCP</b><span id="mcpStatus">未连接</span></div>
+    <div id="mcpBox" style="padding:8px 14px">
+      <button id="mcpConnect" class="chip" style="width:100%;text-align:center;background:rgba(240,185,11,.12);border-color:var(--gold-dark);color:var(--gold);font-weight:600">🔌 连接币安 MCP</button>
+      <div id="mcpDetail" style="font-size:11px;color:var(--muted);line-height:1.6;margin-top:6px">连接后可让 AI Agent 通过币安官方 MCP 执行交易</div>
+    </div>
     <div class="sideHead" style="border-top:1px solid var(--border)"><b>自选列表</b><span>点击币种选中</span></div>
     <div id="watchBox" style="min-height:34px;padding:4px 0"></div>
     <div class="sideHead"><b>24h 市场榜</b><span>USDT 交易对</span></div>
@@ -300,6 +305,44 @@ document.getElementById("watchBox").addEventListener("click",e=>{
   const w=e.target.closest(".wchip");
   if(w)setCoin(w.dataset.sym);
 });
+// ---------- 币安 MCP 面板 ----------
+const mcpStatus=$("#mcpStatus"), mcpDetail=$("#mcpDetail"), mcpConnectBtn=$("#mcpConnect");
+let mcpPollTimer=null;
+function setMcpStatus(st,detail){
+  mcpStatus.textContent=st;
+  mcpDetail.textContent=detail||"";
+}
+async function pollMcp(){
+  try{
+    const j=await(await fetch("/api/mcp/status")).json();
+    if(j.connected){mcpStatus.textContent="已连接 ✅";mcpDetail.textContent="AI Agent 已通过币安官方 MCP 接入，可在输入框直接说：通过 MCP 买入 10 USDT 的 BTC";mcpConnectBtn.textContent="✅ 已连接";mcpConnectBtn.onclick=async()=>{await post("/api/mcp/disconnect",{});mcpConnectBtn.textContent="🔌 连接币安 MCP";setMcpStatus("未连接","");};clearInterval(mcpPollTimer);return;}
+    if(j.auth_status==="waiting_browser"){
+      mcpStatus.textContent="等待浏览器授权…";
+      mcpDetail.innerHTML="浏览器已打开币安授权页：登录 → 点授权 → 会自动回到这里。<br>若浏览器未打开，<a href='"+j.auth_url+"' target='_blank' style='color:var(--gold)'>点此打开授权页</a>";
+      return;
+    }
+    if(j.auth_status==="failed"){
+      mcpStatus.textContent="连接失败";
+      const d=j.auth_detail||"";
+      if(d.includes("白名单")||d.includes("暂不支持")||d.includes("3346001")){
+        mcpDetail.innerHTML="币安 Agentic 授权当前仅对白名单客户端开放（Claude Desktop / Cursor 等）。<br>本项目的 MCP 协议实现已验证完整，白名单开放后可零改动接入。<br>完成 MCP 任务请按 README 指引使用官方支持的客户端。";
+      }else if(d.includes("超时")||d.includes("timeout")){
+        mcpDetail.innerHTML="授权等待超时。请重试，并确认代理 BIN_AGENT_MCP_PROXY 已配置。";
+      }else{
+        mcpDetail.textContent=d+"（详见 README「已知限制」）";
+      }
+      mcpConnectBtn.textContent="🔌 重试连接";clearInterval(mcpPollTimer);return;
+    }
+    mcpStatus.textContent="连接中…";mcpDetail.textContent=j.auth_detail||"处理中…";
+  }catch(e){}
+}
+mcpConnectBtn.onclick=async()=>{
+  mcpConnectBtn.textContent="连接中…";
+  try{await post("/api/mcp/connect",{});}catch(e){}
+  clearInterval(mcpPollTimer);
+  mcpPollTimer=setInterval(pollMcp,2000);
+  pollMcp();
+};
 // 报告一键复制（取最近一条 bot 消息）
 let lastBotText="";
 const _add=add;
