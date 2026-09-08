@@ -3,6 +3,9 @@
 *.key
 *.pem
 
+# MCP OAuth credential cache (Binance MCP login tokens)
+.mcp_token
+
 # Python
 __pycache__/
 *.py[cod]
